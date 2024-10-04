@@ -27,15 +27,6 @@ WORKDIR /var/www/html
 # Salin file composer.json, composer.lock, dan artisan terlebih dahulu
 COPY composer.json composer.lock artisan ./
 
-# Salin direktori bootstrap dan lainnya yang diperlukan
-COPY bootstrap/ bootstrap/
-COPY config/ config/
-COPY public/ public/
-COPY resources/ resources/
-COPY routes/ routes/
-COPY storage/ storage/
-COPY .env .env
-
 # Jalankan composer install
 RUN composer install --prefer-dist --no-dev --optimize-autoloader
 
