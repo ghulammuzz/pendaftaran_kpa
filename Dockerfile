@@ -25,7 +25,7 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 WORKDIR /var/www/html
 
 # Salin file composer.json, composer.lock, dan artisan terlebih dahulu
-COPY composer.json composer.lock artisan ./
+COPY composer.json composer.lock ./
 
 # Jalankan composer install
 RUN composer install --prefer-dist --no-dev --optimize-autoloader
