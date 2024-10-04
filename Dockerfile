@@ -5,7 +5,7 @@ FROM node:16-alpine AS node_builder
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm install
 
 # Copy seluruh kode proyek dan build aset
