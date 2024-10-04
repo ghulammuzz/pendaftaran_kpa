@@ -1,40 +1,89 @@
-# Menggunakan image PHP yang sesuai
-FROM php:8.3-fpm
+#########################################
+# NPM DEPENDENCIES
+#########################################
+FROM node:20-alpine as npm-dependencies
 
-# Menginstal ekstensi yang diperlukan
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libzip-dev \
-    git \
-    nodejs \
-    npm \
-    unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip
-
-# Instal Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Set working directory
 WORKDIR /app
 
-# Menyalin file composer dan install dependensi PHP
-COPY composer.json composer.lock ./
-RUN composer install --no-autoloader --no-scripts
+COPY package.json package.json
 
-# Menyalin file aplikasi
-COPY . .
+RUN npm install
 
-# Install dependensi Node.js dan build aset
-RUN npm install && npm run prod
+#########################################
+# COMPOSER DEPENDENCIES + BUILD
+#########################################
+FROM composer:latest as composer-build
 
-# Jalankan composer autoload
-RUN composer dump-autoload
+RUN apk update \
+    && apk add \
+        libxml2-dev \
+        php-soap \
+    && rm -rf /var/cache/apk/*
 
-# Expose port yang diperlukan (misalnya 9000)
-EXPOSE 9000
+RUN docker-php-ext-install \
+    bcmath \
+    exif \
+    soap
 
-# Menjalankan php-fpm
-CMD ["php-fpm"]
+WORKDIR /app
+
+RUN composer global require hirak/prestissimo \
+    --prefer-dist \
+    --prefer-stable \
+    --no-progress \
+    --no-scripts \
+    --no-suggest \
+    --no-interaction \
+    --ansi
+
+COPY --from=npm-dependencies /app /app
+
+COPY composer.json composer.json
+COPY composer.lock composer.lock
+
+RUN composer install --prefer-dist --no-scripts --no-dev --no-autoloader && rm -rf /root/.composer
+
+COPY . /app
+
+RUN composer dump-autoload --no-scripts --no-dev --optimize
+
+#########################################
+# NPM BUILD
+#########################################
+FROM node:20-alpine as npm-build
+
+WORKDIR /app
+
+COPY --from=composer-build /app /app
+
+RUN npm run prod
+RUN npm cache clean --force && rm -rf node_modules
+
+#########################################
+# RUN APACHE + PHP
+#########################################
+FROM php:8.3-apache
+
+RUN rm /etc/apt/preferences.d/no-debian-php \
+    && apt-get update \
+    && apt-get install -y \
+        libxml2-dev \
+        php-soap \
+    && apt-get clean -y
+
+RUN docker-php-ext-install \
+    bcmath \
+    exif \
+    mbstring \
+    opcache \
+    pdo_mysql \
+    soap
+
+WORKDIR /app
+EXPOSE 80
+
+COPY --from=npm-build /app /app
+COPY docker/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
+
+RUN chown -R www-data:www-data /app \
+    && a2enmod rewrite
