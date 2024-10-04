@@ -1,40 +1,42 @@
-# Menggunakan image PHP yang sesuai
-FROM php:8.3-fpm
+FROM php:8.3-zts-alpine
 
-# Menginstal ekstensi yang diperlukan
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libzip-dev \
+WORKDIR /var/www
+
+RUN apk add --no-cache \
+    curl \
     git \
-    nodejs \
-    npm \
+    bash \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    icu-dev \
+    libzip-dev \
+    zip \
     unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip
+    oniguruma-dev \
+    nodejs \
+    npm
 
-# Instal Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd intl pdo pdo_mysql mbstring exif pcntl bcmath opcache zip
 
-# Set working directory
-WORKDIR /app
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Menyalin file composer dan install dependensi PHP
-COPY composer.json composer.lock ./
-RUN composer install --no-autoloader --no-scripts
-
-# Menyalin file aplikasi
 COPY . .
 
-# Install dependensi Node.js dan build aset
-RUN npm install && npm run prod
+RUN composer install --no-dev --optimize-autoloader
 
-# Jalankan composer autoload
-RUN composer dump-autoload
+RUN npm install
 
-# Expose port yang diperlukan (misalnya 9000)
-EXPOSE 6767
+RUN npm run build
 
-# Menjalankan php-fpm
-CMD ["php-fpm"]
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/public
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 8000
+
+USER www-data
+
+ENTRYPOINT ["entrypoint.sh"]
