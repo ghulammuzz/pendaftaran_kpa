@@ -2,7 +2,7 @@ FROM php:8.3-apache
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
@@ -13,7 +13,7 @@ RUN apt-get install -y \
     npm \
     nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-    
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Install Node.js (jika belum terinstal)
