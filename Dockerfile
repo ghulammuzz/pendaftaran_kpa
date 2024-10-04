@@ -25,7 +25,7 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --prefer-dist --no-dev --no-autoloader --no-scripts
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm install
 
 COPY . .
