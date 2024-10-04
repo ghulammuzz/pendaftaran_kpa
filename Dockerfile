@@ -9,7 +9,7 @@ RUN npm install
 COPY webpack.mix.js ./
 COPY resources ./resources
 
-RUN npm run production
+RUN npm run prod
 
 # Stage 2: Setup PHP and serve
 FROM php:8.3-fpm
