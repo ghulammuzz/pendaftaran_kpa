@@ -8,6 +8,7 @@ RUN npm install
 
 COPY webpack.mix.js ./
 COPY resources ./resources
+COPY public ./public
 
 RUN npm run prod
 
