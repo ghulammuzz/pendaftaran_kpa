@@ -28,6 +28,8 @@ RUN composer install --no-dev --optimize-autoloader
 
 RUN npm install
 
+RUN npm install sass --save-dev --legacy-peer-deps
+
 RUN npm run prod
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/public
