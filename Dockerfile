@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
 # Install Node.js (jika belum terinstal)
 # RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
 #     apt-get install -y nodejs
@@ -41,6 +43,7 @@ RUN a2enmod rewrite
 
 RUN echo 'DirectoryIndex index.php index.html' >> /etc/apache2/apache2.conf
 
+COPY ./docker/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
 EXPOSE 80
 
 CMD ["apache2-foreground"]
