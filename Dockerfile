@@ -1,44 +1,44 @@
-FROM php:8.3-zts-alpine
+FROM php:8.1-apache
 
-WORKDIR /var/www
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apk add --no-cache \
-    curl \
+RUN apt-get update && apt-get install -y \
     git \
-    bash \
+    curl \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    icu-dev \
-    libzip-dev \
+    libonig-dev \
+    libxml2-dev \
     zip \
     unzip \
-    oniguruma-dev \
+    npm \
     nodejs \
-    npm
-
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd intl pdo pdo_mysql mbstring exif pcntl bcmath opcache zip
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-COPY . .
+# Install Node.js (jika belum terinstal)
+# RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
+#     apt-get install -y nodejs
 
-RUN composer install --no-dev --optimize-autoloader
+WORKDIR /var/www/html
 
+COPY composer.json composer.lock ./
+RUN composer install --prefer-dist --no-dev --no-autoloader --no-scripts
+
+COPY package.json package-lock.json ./
 RUN npm install
 
-RUN npm install sass --save-dev --legacy-peer-deps
+COPY . .
 
-RUN npm run prod
+RUN composer dump-autoload --optimize
 
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/public
+RUN npm run production
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-EXPOSE 8000
+RUN a2enmod rewrite
 
-USER www-data
+EXPOSE 80
 
-ENTRYPOINT ["entrypoint.sh"]
+CMD ["apache2-foreground"]
