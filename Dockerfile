@@ -39,6 +39,8 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 RUN a2enmod rewrite
 
+RUN echo 'DirectoryIndex index.php index.html' >> /etc/apache2/apache2.conf
+
 EXPOSE 80
 
 CMD ["apache2-foreground"]
