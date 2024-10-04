@@ -1,7 +1,21 @@
-FROM php:8.3-apache
+# Stage 1: Build Stage
+FROM node:16-alpine AS node_builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Set working directory
+WORKDIR /app
 
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copy seluruh kode proyek dan build aset
+COPY . .
+RUN npm run production
+
+# Stage 2: PHP Composer Install
+FROM php:8.3-fpm AS php_builder
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -10,40 +24,44 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    npm \
-    nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Install Node.js (jika belum terinstal)
-# RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
-#     apt-get install -y nodejs
-
+# Set working directory
 WORKDIR /var/www/html
 
+# Copy composer files and install dependencies
 COPY composer.json composer.lock ./
-RUN composer install --prefer-dist --no-dev --no-autoloader --no-scripts
+RUN composer install --prefer-dist --no-dev --optimize-autoloader
 
-COPY package.json ./
-RUN npm install
-
+# Copy aplikasi ke dalam image
 COPY . .
 
+# Generate autoload files
 RUN composer dump-autoload --optimize
 
-RUN npm run production
+# Set izin
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
+# Stage 3: Final Stage with Nginx
+FROM nginx:alpine
 
-RUN a2enmod rewrite
+# Copy built assets from node_builder
+COPY --from=node_builder /app/public /var/www/html/public
 
-RUN echo 'DirectoryIndex index.php index.html' >> /etc/apache2/apache2.conf
+# Copy PHP application from php_builder
+COPY --from=php_builder /var/www/html /var/www/html
 
-COPY ./docker/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
+# Copy Nginx configuration
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# Set working directory
+WORKDIR /var/www/html
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
