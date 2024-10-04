@@ -1,4 +1,4 @@
-# Stage 1: Build Stage
+# Stage 1: Node Builder
 FROM node:16-alpine AS node_builder
 
 # Set working directory
@@ -32,26 +32,32 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files and install dependencies
+# Copy composer files
 COPY composer.json composer.lock ./
+
+# **Salin file artisan terlebih dahulu**
+COPY artisan ./
+
+# Jalankan composer install
 RUN composer install --prefer-dist --no-dev --optimize-autoloader
 
-# Copy aplikasi ke dalam image
+# Copy seluruh kode proyek
 COPY . .
 
 # Generate autoload files
 RUN composer dump-autoload --optimize
 
 # Set izin
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
 
-# Stage 3: Final Stage with Nginx
+# Stage 3: Final Stage dengan Nginx
 FROM nginx:alpine
 
-# Copy built assets from node_builder
+# Copy built assets dari node_builder
 COPY --from=node_builder /app/public /var/www/html/public
 
-# Copy PHP application from php_builder
+# Copy PHP application dari php_builder
 COPY --from=php_builder /var/www/html /var/www/html
 
 # Copy Nginx configuration
