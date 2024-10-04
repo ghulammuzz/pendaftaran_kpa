@@ -1,6 +1,8 @@
 FROM php:8.3-apache
 
-RUN apk add --no-cache \
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get install -y \
     git \
     curl \
     libpng-dev \
@@ -9,10 +11,9 @@ RUN apk add --no-cache \
     zip \
     unzip \
     npm \
-    nodejs 
-
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd intl pdo pdo_mysql mbstring exif pcntl bcmath opcache zip
+    nodejs \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Install Node.js (jika belum terinstal)
