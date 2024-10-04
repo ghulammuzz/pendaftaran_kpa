@@ -1,4 +1,4 @@
-const mix = require('laravel-mix');
+// const mix = require('laravel-mix');
 
 /*
  |--------------------------------------------------------------------------
@@ -11,12 +11,9 @@ const mix = require('laravel-mix');
  |
  */
 
-mix.js('resources/js/app.js', 'public/js')
-   .styles([
-       'resources/css/app.css',
-       // Tambahkan file CSS lainnya jika diperlukan
-   ], 'public/css/app.css')
-   .options({
-       processCssUrls: false,
-   })
-   .version();
+ const mix = require('laravel-mix');
+
+ mix.js('resources/js/app.js', 'public/js')
+    .css('resources/css/app.css', 'public/css')
+    .version(); // optional for cache busting
+ 
