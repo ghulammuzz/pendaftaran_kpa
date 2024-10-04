@@ -35,7 +35,6 @@ COPY resources/ resources/
 COPY routes/ routes/
 COPY storage/ storage/
 COPY .env .env
-COPY vendor/ vendor/
 
 # Jalankan composer install
 RUN composer install --prefer-dist --no-dev --optimize-autoloader
